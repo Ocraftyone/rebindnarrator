@@ -17,6 +17,9 @@ public abstract class KeyboardHandlerMixin {
 
     @Redirect(method = "keyPress", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/screens/Screen;hasControlDown()Z", ordinal = 1))
     private boolean getModifierKey() {
+        if (KeyBindHandler.TOGGLE_NARRATOR.isUnbound()) {
+            return false;
+        }
         return KeyBindHandler.TOGGLE_NARRATOR.getKeyModifier().isActive(null);
     }
 }

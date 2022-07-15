@@ -20,7 +20,7 @@ apply plugin: 'org.spongepowered.mixin'
 
 
 group = 'com.ocraftyone'
-version = '1.2'
+version = '1.2.1'
 
 java {
     archivesBaseName = 'rebindnarrator'
