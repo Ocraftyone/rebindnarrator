@@ -1,6 +1,7 @@
 package com.ocraftyone.rebindnarrator;
 
 import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
@@ -24,7 +25,11 @@ public class RebindNarrator {
         @SubscribeEvent
         public static void clientSetup(FMLClientSetupEvent event) {
             LOGGER.info("HELLO FROM CLIENT SETUP");
-            KeyBindHandler.registerKeybinds();
+        }
+    
+        @SubscribeEvent
+        public static void registerKeybinds(RegisterKeyMappingsEvent event) {
+            KeyBindHandler.registerKeybinds(event);
         }
     }
 }
