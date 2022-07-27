@@ -1,5 +1,8 @@
-final def PARCHMENT_VER = '2022.06.05-1.18.2'
-final def FORGE_VERSION = '1.18.2-40.1.60'
+import groovy.swing.SwingBuilder
+
+import javax.swing.*
+import java.awt.*
+
 buildscript {
     repositories {
         // These repositories are only for Gradle plugins, put any other repositories in the repository block further below
@@ -11,19 +14,43 @@ buildscript {
         classpath group: 'net.minecraftforge.gradle', name: 'ForgeGradle', version: '5.1.+', changing: true
         classpath 'org.parchmentmc:librarian:1.+'
         classpath 'org.spongepowered:mixingradle:0.7+'
+        classpath 'org.codehaus.groovy:groovy-swing:latest.release'
     }
 }
 
+plugins {
+    id 'com.matthewprenger.cursegradle' version 'latest.release'
+}
+
+ext {
+    PARCHMENT_VER = parchmentVer + "-" + mcVer
+    FORGE_VERSION = mcVer + "-" + forgeVer
+    noSpaceName = projectName.replaceAll(" ", "")
+    lowerName = noSpaceName.toLowerCase()
+    useOfficialMappings = Boolean.parseBoolean(useOfficialMappings)
+    useMixins = Boolean.parseBoolean(useMixins)
+    useAT = Boolean.parseBoolean(useAT)
+    mcVersions = mcVersions.replaceAll(" ", "").split(",")
+}
+
+def localProperties = new Properties()
+localProperties.load(new FileInputStream(rootProject.file("local.properties")))
+localProperties.each {prop -> project.ext.set(prop.key, prop.value)}
+
 apply plugin: 'net.minecraftforge.gradle'
-apply plugin: 'org.parchmentmc.librarian.forgegradle'
-apply plugin: 'org.spongepowered.mixin'
+if (!useOfficialMappings) {
+    apply plugin: 'org.parchmentmc.librarian.forgegradle'
+}
+if (useMixins) {
+    apply plugin: 'org.spongepowered.mixin'
+}
 
 
 group = 'com.ocraftyone'
-version = '1.1.1'
+version = buildVer
 
 java {
-    archivesBaseName = 'rebindnarrator'
+    archivesBaseName = lowerName
     toolchain.languageVersion = JavaLanguageVersion.of(17)
 }
 
@@ -39,10 +66,17 @@ minecraft {
     //
     // Use non-default mappings at your own risk. They may not always work.
     // Simply re-run your setup task after changing the mappings to update your workspace.
-//    mappings channel: 'official', version: '1.18.2'
-    mappings channel: 'parchment', version: PARCHMENT_VER
+    if (useOfficialMappings) {
+        println("Using official MC mappings")
+        mappings channel: 'official', version: mcVer
+    } else {
+        println "Using Parchment mappings version " + PARCHMENT_VER
+        mappings channel: 'parchment', version: PARCHMENT_VER
+    }
 
-    // accessTransformer = file('src/main/resources/META-INF/accesstransformer.cfg')
+    if (useAT) {
+        accessTransformer = file('src/main/resources/META-INF/accesstransformer.cfg')
+    }
 
     // Default run configurations.
     // These can be tweaked, removed, or duplicated as needed.
@@ -62,10 +96,10 @@ minecraft {
             // Please read: https://stackoverflow.com/questions/2031163/when-to-use-the-different-log-levels
             property 'forge.logging.console.level', 'debug'
 
-            property 'forge.enabledGameTestNamespaces', 'rebindnarrator'
+            property 'forge.enabledGameTestNamespaces', lowerName
 
             mods {
-                rebindnarrator {
+                "$lowerName" {
                     source sourceSets.main
                 }
             }
@@ -86,10 +120,10 @@ minecraft {
             // Please read: https://stackoverflow.com/questions/2031163/when-to-use-the-different-log-levels
             property 'forge.logging.console.level', 'debug'
 
-            property 'forge.enabledGameTestNamespaces', 'rebindnarrator'
+            property 'forge.enabledGameTestNamespaces', lowerName
 
             mods {
-                rebindnarrator {
+                "$lowerName" {
                     source sourceSets.main
                 }
             }
@@ -111,10 +145,10 @@ minecraft {
             property 'forge.logging.console.level', 'debug'
 
             // Comma-separated list of namespaces to load gametests from. Empty = all namespaces.
-            property 'forge.enabledGameTestNamespaces', 'rebindnarrator'
+            property 'forge.enabledGameTestNamespaces', lowerName
 
             mods {
-                rebindnarrator {
+                "$lowerName" {
                     source sourceSets.main
                 }
             }
@@ -136,10 +170,10 @@ minecraft {
             property 'forge.logging.console.level', 'debug'
 
             // Specify the modid for data generation, where to output the resulting resource, and where to look for existing resources.
-            args '--mod', 'rebindnarrator', '--all', '--output', file('src/generated/resources/'), '--existing', file('src/main/resources/')
+            args '--mod', lowerName, '--all', '--output', file('src/generated/resources/'), '--existing', file('src/main/resources/')
 
             mods {
-                rebindnarrator {
+                "$lowerName" {
                     source sourceSets.main
                 }
             }
@@ -147,10 +181,11 @@ minecraft {
     }
 }
 
-mixin {
-    add sourceSets.main, "rebindnarrator.refmap.json"
-
-    config "RebindNarrator.mixins.json"
+if (useMixins) {
+    mixin {
+        add sourceSets.main, lowerName + ".refmap.json"
+        config noSpaceName + ".mixins.json"
+    }
 }
 
 // Include resources generated by data generators.
@@ -184,14 +219,16 @@ dependencies {
     // http://www.gradle.org/docs/current/userguide/artifact_dependencies_tutorial.html
     // http://www.gradle.org/docs/current/userguide/dependency_management.html
 
-    annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
+    if (useMixins) {
+        annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
+    }
 }
 
 // Example for how to get properties into the manifest for reading at runtime.
 jar {
     manifest {
         attributes([
-                "Specification-Title"     : "rebindnarrator",
+                "Specification-Title"     : lowerName,
                 "Specification-Vendor"    : "Ocraftyone",
                 "Specification-Version"   : "1", // We are version 1 of ourselves
                 "Implementation-Title"    : project.name,
@@ -203,3 +240,68 @@ jar {
 }
 
 jar.finalizedBy('reobfJar')
+
+curseforge {
+    gradle.taskGraph.whenReady { taskGraph ->
+        if (taskGraph.hasTask(":curseforge")) {
+            var finalChangelog = ""
+            var finalReleaseType = ""
+            var cancel = false
+            new SwingBuilder().edt {
+                dialog(modal: true,
+                        title: "Enter upload details",
+                        alwaysOnTop: true,
+                        resizable: false,
+                        locationRelativeTo: null,
+                        pack: true,
+                        show: true,
+                        defaultCloseOperation: JFrame.DISPOSE_ON_CLOSE) {
+                    panel(layout: new GridLayout(5, 1)) {
+                        label(text: "Changelog")
+                        changelog = textArea(rows: 4)
+                        label(text: "Release Type")
+
+                        panel {
+                            var group = new ButtonGroup()
+                            var update = {
+                                finalReleaseType = group.getSelection().actionCommand
+                            }
+                            var release = radioButton(text: "Release", actionPerformed: update, actionCommand: "release")
+                            var beta = radioButton(text: "Beta", actionPerformed: update, actionCommand: "beta")
+                            var alpha = radioButton(text: "Alpha", actionPerformed: update, actionCommand: "alpha")
+                            group.add(release)
+                            group.add(beta)
+                            group.add(alpha)
+                        }
+                        panel {
+                            button(text: "OK", actionPerformed: {
+                                finalChangelog = changelog.text
+                                println finalChangelog
+                                println finalReleaseType
+                                dispose()
+                            })
+                            button(text: "Cancel", actionPerformed: {
+                                cancel = true
+                                println "Cancelled"
+                                dispose()
+                            })
+                        }
+                    }
+                }
+            }
+            if (cancel) {
+                throw new GradleException("Upload Cancelled")
+            }
+            apiKey = apiToken
+            project {
+                id = projectID
+                mainArtifact jar
+                changelog = finalChangelog
+                Arrays.stream(mcVersions).forEachOrdered{String version ->
+                    addGameVersion version
+                }
+            }
+        }
+    }
+}
+
