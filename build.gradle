@@ -47,7 +47,7 @@ if (useMixins) {
 
 
 group = 'com.ocraftyone'
-version = buildVer
+version = "forge-" + jarMCVer + "-" + buildVer
 
 java {
     archivesBaseName = lowerName
