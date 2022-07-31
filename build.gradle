@@ -35,7 +35,7 @@ ext {
 
 def localProperties = new Properties()
 localProperties.load(new FileInputStream(rootProject.file("local.properties")))
-localProperties.each {prop -> project.ext.set(prop.key, prop.value)}
+localProperties.each { prop -> project.ext.set(prop.key, prop.value) }
 
 apply plugin: 'net.minecraftforge.gradle'
 if (!useOfficialMappings) {
@@ -205,7 +205,7 @@ dependencies {
     // Specify the version of Minecraft to use. If this is any group other than 'net.minecraft' it is assumed
     // that the dep is a ForgeGradle 'patcher' dependency, and its patches will be applied.
     // The userdev artifact is a special name and will get all sorts of transformations applied to it.
-     minecraft 'net.minecraftforge:forge:' + FORGE_VERSION
+    minecraft 'net.minecraftforge:forge:' + FORGE_VERSION
 
     // Real mod deobf dependency examples - these get remapped to your current mappings
     // compileOnly fg.deobf("mezz.jei:jei-${mc_version}:${jei_version}:api") // Adds JEI API as a compile dependency
@@ -232,7 +232,7 @@ jar {
                 "Specification-Vendor"    : "Ocraftyone",
                 "Specification-Version"   : "1", // We are version 1 of ourselves
                 "Implementation-Title"    : project.name,
-                "Implementation-Version"  : project.jar.archiveVersion,
+                "Implementation-Version"  : buildVer,
                 "Implementation-Vendor"   : "Ocraftyone",
                 "Implementation-Timestamp": new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
         ])
@@ -241,67 +241,73 @@ jar {
 
 jar.finalizedBy('reobfJar')
 
-curseforge {
-    gradle.taskGraph.whenReady { taskGraph ->
-        if (taskGraph.hasTask(":curseforge")) {
-            var finalChangelog = ""
-            var finalReleaseType = ""
-            var cancel = false
-            new SwingBuilder().edt {
-                dialog(modal: true,
-                        title: "Enter upload details",
-                        alwaysOnTop: true,
-                        resizable: false,
-                        locationRelativeTo: null,
-                        pack: true,
-                        show: true,
-                        defaultCloseOperation: JFrame.DISPOSE_ON_CLOSE) {
-                    panel(layout: new GridLayout(5, 1)) {
-                        label(text: "Changelog")
-                        changelog = textArea(rows: 4)
-                        label(text: "Release Type")
+tasks.register "publishToCurseforge", {
+    group "publish"
+    def finalChangelog = ""
+    doFirst {
+        var success = false
+        new SwingBuilder().edt {
+            dialog(modal: true,
+                    title: "Enter upload details",
+                    alwaysOnTop: true,
+                    resizable: false,
+                    locationRelativeTo: null,
+                    pack: true,
+                    show: true,
+                    defaultCloseOperation: JFrame.DISPOSE_ON_CLOSE) {
+                panel(layout: new GridLayout(3, 1)) {
+                    label(text: "Changelog")
+                    scrollPane {
+                        changelog = textArea(rows: 6, columns: 30)
+                    }
 
-                        panel {
-                            var group = new ButtonGroup()
-                            var update = {
-                                finalReleaseType = group.getSelection().actionCommand
+                    /*label(text: "Release Type")
+                    panel {
+                        var group = new ButtonGroup()
+                        var update = {
+                            finalReleaseType = group.getSelection().actionCommand
+                        }
+                        var release = radioButton(text: "Release", actionPerformed: update, actionCommand: "release")
+                        var beta = radioButton(text: "Beta", actionPerformed: update, actionCommand: "beta")
+                        var alpha = radioButton(text: "Alpha", actionPerformed: update, actionCommand: "alpha")
+                        group.add(release)
+                        group.add(beta)
+                        group.add(alpha)
+                    }*/
+                    panel {
+                        button(text: "OK", actionPerformed: {
+                            finalChangelog = changelog.text
+                            if (!finalChangelog.isEmpty()) {
+                                success = true
+                                file("changelog.txt").write(finalChangelog)
                             }
-                            var release = radioButton(text: "Release", actionPerformed: update, actionCommand: "release")
-                            var beta = radioButton(text: "Beta", actionPerformed: update, actionCommand: "beta")
-                            var alpha = radioButton(text: "Alpha", actionPerformed: update, actionCommand: "alpha")
-                            group.add(release)
-                            group.add(beta)
-                            group.add(alpha)
-                        }
-                        panel {
-                            button(text: "OK", actionPerformed: {
-                                finalChangelog = changelog.text
-                                println finalChangelog
-                                println finalReleaseType
-                                dispose()
-                            })
-                            button(text: "Cancel", actionPerformed: {
-                                cancel = true
-                                println "Cancelled"
-                                dispose()
-                            })
-                        }
+                            dispose()
+                        })
+                        button(text: "Cancel", actionPerformed: {
+                            println "Cancelled"
+                            dispose()
+                        })
                     }
                 }
             }
-            if (cancel) {
+            if (!success) {
                 throw new GradleException("Upload Cancelled")
-            }
-            apiKey = apiToken
-            project {
-                id = projectID
-                mainArtifact jar
-                changelog = finalChangelog
-                Arrays.stream(mcVersions).forEachOrdered{String version ->
-                    addGameVersion version
-                }
             }
         }
     }
 }
 
+curseforge {
+    apiKey = apiToken
+    project {
+        id = projectID
+        mainArtifact jar
+        changelog = file("changelog.txt")
+        releaseType = "release"
+        Arrays.stream(mcVersions).forEachOrdered { String version ->
+            addGameVersion version
+        }
+    }
+}
+
+publishToCurseforge.finalizedBy "curseforge"
