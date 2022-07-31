@@ -51,7 +51,7 @@ version = "forge-" + jarMCVer + "-" + buildVer
 
 java {
     archivesBaseName = lowerName
-    toolchain.languageVersion = JavaLanguageVersion.of(17)
+    toolchain.languageVersion = JavaLanguageVersion.of(8)
 }
 
 minecraft {
