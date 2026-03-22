@@ -10,13 +10,13 @@ import org.spongepowered.asm.mixin.injection.ModifyConstant;
 import org.spongepowered.asm.mixin.injection.Redirect;
 
 @Mixin(KeyboardHandler.class)
-public abstract class KeyboardHandlerMixin {
+public abstract class KeyboardHandlerMixinOld {
     @ModifyConstant(method = "keyPress", constant = @Constant(intValue = 66))
     private int getNarratorKey(int constant) {
         return KeyBindHandler.TOGGLE_NARRATOR.getKey().getValue();
     }
 
-    @Redirect(method = "keyPress", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/input/KeyEvent;hasControlDownWithQuirk()Z", ordinal = 1))
+    @Redirect(method = "keyPress", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/input/KeyEvent;hasControlDown()Z", ordinal = 1))
     private boolean getModifierKey(KeyEvent instance) {
         if (KeyBindHandler.TOGGLE_NARRATOR.isUnbound()) {
             return false;
