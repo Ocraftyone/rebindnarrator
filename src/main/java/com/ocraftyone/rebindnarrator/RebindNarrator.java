@@ -1,32 +1,39 @@
 package com.ocraftyone.rebindnarrator;
 
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
+import net.neoforged.fml.loading.FMLEnvironment;
+import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 // The value here should match an entry in the META-INF/mods.toml file
 @Mod(RebindNarrator.MODID)
 public class RebindNarrator {
-    
+
     // Directly reference a log4j logger.
     private static final Logger LOGGER = LogManager.getLogger();
-    
+
     public static final String MODID = "rebindnarrator";
-    
-    public RebindNarrator() {
+
+    public RebindNarrator(IEventBus modBus) {
+        if (FMLEnvironment.dist == Dist.CLIENT) {
+            modBus.register(ClientEvents.class);
+        }
     }
 
-    @Mod.EventBusSubscriber(modid = MODID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+    // Temporarily move event registration to constructor to ensure compatability
+    // EventBusSubscriber removed bus parameter between 1.21 and 1.21.8
+//    @EventBusSubscriber(modid = MODID, value = Dist.CLIENT)
     public class ClientEvents {
         @SubscribeEvent
         public static void clientSetup(FMLClientSetupEvent event) {
             LOGGER.info("HELLO FROM CLIENT SETUP");
         }
-    
+
         @SubscribeEvent
         public static void registerKeybinds(RegisterKeyMappingsEvent event) {
             KeyBindHandler.registerKeybinds(event);

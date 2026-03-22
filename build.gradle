@@ -1,211 +1,115 @@
-import groovy.swing.SwingBuilder
-
-import javax.swing.*
-import java.awt.*
-
-buildscript {
-    repositories {
-        // These repositories are only for Gradle plugins, put any other repositories in the repository block further below
-        maven { url = 'https://maven.minecraftforge.net' }
-        maven { url = 'https://maven.parchmentmc.org' }
-        mavenCentral()
-    }
-    dependencies {
-        classpath group: 'net.minecraftforge.gradle', name: 'ForgeGradle', version: '5.1.+', changing: true
-        classpath 'org.parchmentmc:librarian:1.+'
-        classpath 'org.spongepowered:mixingradle:0.7+'
-        classpath 'org.codehaus.groovy:groovy-swing:latest.release'
-    }
+plugins {
+    id 'java-library'
+    id 'net.neoforged.gradle.userdev' version '7.1.21'
 }
 
-plugins {
-    id 'com.matthewprenger.cursegradle' version 'latest.release'
+subsystems {
+    parchment{
+        minecraftVersion = mcVer
+        mappingsVersion = parchmentVer
+    }
 }
 
 ext {
-    PARCHMENT_VER = parchmentVer + "-" + mcVer
-    FORGE_VERSION = mcVer + "-" + forgeVer
     noSpaceName = projectName.replaceAll(" ", "")
     lowerName = noSpaceName.toLowerCase()
-    useOfficialMappings = Boolean.parseBoolean(useOfficialMappings)
     useMixins = Boolean.parseBoolean(useMixins)
     useAT = Boolean.parseBoolean(useAT)
-    mcVersions = mcVersions.replaceAll(" ", "").split(",")
+    mixins_config = ""
+    at_config = ""
 }
 
-def localProperties = new Properties()
-localProperties.load(new FileInputStream(rootProject.file("local.properties")))
-localProperties.each { prop -> project.ext.set(prop.key, prop.value) }
-
-apply plugin: 'net.minecraftforge.gradle'
-if (!useOfficialMappings) {
-    apply plugin: 'org.parchmentmc.librarian.forgegradle'
-}
 if (useMixins) {
-    apply plugin: 'org.spongepowered.mixin'
+    ext.mixins_config = """
+[[mixins]]
+config="${lowerName}.mixins.json"
+"""
 }
 
+if (useAT) {
+    ext.at_config = """
+[[accessTransformers]]
+file="META-INF/accesstransformer.cfg"
+"""
+}
 
 group = 'com.ocraftyone'
-version = "forge-" + jarMCVer + "-" + buildVer
+version = "neoforge-" + jarMCVer + "-" + buildVer
 
 java {
-    archivesBaseName = lowerName
-    toolchain.languageVersion = JavaLanguageVersion.of(17)
+    toolchain.languageVersion = JavaLanguageVersion.of(21)
 }
 
-minecraft {
-    // The mappings can be changed at any time and must be in the following format.
-    // Channel:   Version:
-    // snapshot   YYYYMMDD   Snapshot are built nightly.
-    // stable     #          Stables are built at the discretion of the MCP team.
-    // official   MCVersion  Official field/method names from Mojang mapping files
-    //
-    // You must be aware of the Mojang license when using the 'official' mappings.
-    // See more information here: https://github.com/MinecraftForge/MCPConfig/blob/master/Mojang.md
-    //
-    // Use non-default mappings at your own risk. They may not always work.
-    // Simply re-run your setup task after changing the mappings to update your workspace.
-    if (useOfficialMappings) {
-        println("Using official MC mappings")
-        mappings channel: 'official', version: mcVer
-    } else {
-        println "Using Parchment mappings version " + PARCHMENT_VER
-        mappings channel: 'parchment', version: PARCHMENT_VER
+runs {
+    // applies to all the run configs below
+    configureEach {
+        // Recommended logging data for a userdev environment
+        // The markers can be added/remove as needed separated by commas.
+        // "SCAN": For mods scan.
+        // "REGISTRIES": For firing of registry events.
+        // "REGISTRYDUMP": For getting the contents of all registries.
+        systemProperty 'forge.logging.markers', 'REGISTRIES'
+
+        // Recommended logging level for the console
+        // You can set various levels here.
+        // Please read: https://stackoverflow.com/questions/2031163/when-to-use-the-different-log-levels
+        systemProperty 'forge.logging.console.level', 'debug'
+
+        modSource project.sourceSets.main
     }
 
-    if (useAT) {
-        accessTransformer = file('src/main/resources/META-INF/accesstransformer.cfg')
+    client {
+        // Comma-separated list of namespaces to load gametests from. Empty = all namespaces.
+        systemProperty 'neoforge.enabledGameTestNamespaces', project.lowerName
     }
 
-    // Default run configurations.
-    // These can be tweaked, removed, or duplicated as needed.
-    runs {
-        client {
-            workingDirectory project.file('run')
-
-            // Recommended logging data for a userdev environment
-            // The markers can be added/removed as needed separated by commas.
-            // "SCAN": For mods scan.
-            // "REGISTRIES": For firing of registry events.
-            // "REGISTRYDUMP": For getting the contents of all registries.
-            property 'forge.logging.markers', 'REGISTRIES'
-
-            // Recommended logging level for the console
-            // You can set various levels here.
-            // Please read: https://stackoverflow.com/questions/2031163/when-to-use-the-different-log-levels
-            property 'forge.logging.console.level', 'debug'
-
-            property 'forge.enabledGameTestNamespaces', lowerName
-
-            mods {
-                "$lowerName" {
-                    source sourceSets.main
-                }
-            }
-        }
-
-        server {
-            workingDirectory project.file('run')
-
-            // Recommended logging data for a userdev environment
-            // The markers can be added/removed as needed separated by commas.
-            // "SCAN": For mods scan.
-            // "REGISTRIES": For firing of registry events.
-            // "REGISTRYDUMP": For getting the contents of all registries.
-            property 'forge.logging.markers', 'REGISTRIES'
-
-            // Recommended logging level for the console
-            // You can set various levels here.
-            // Please read: https://stackoverflow.com/questions/2031163/when-to-use-the-different-log-levels
-            property 'forge.logging.console.level', 'debug'
-
-            property 'forge.enabledGameTestNamespaces', lowerName
-
-            mods {
-                "$lowerName" {
-                    source sourceSets.main
-                }
-            }
-        }
-
-        gameTestServer {
-            workingDirectory project.file('run')
-
-            // Recommended logging data for a userdev environment
-            // The markers can be added/remove as needed separated by commas.
-            // "SCAN": For mods scan.
-            // "REGISTRIES": For firing of registry events.
-            // "REGISTRYDUMP": For getting the contents of all registries.
-            property 'forge.logging.markers', 'REGISTRIES'
-
-            // Recommended logging level for the console
-            // You can set various levels here.
-            // Please read: https://stackoverflow.com/questions/2031163/when-to-use-the-different-log-levels
-            property 'forge.logging.console.level', 'debug'
-
-            // Comma-separated list of namespaces to load gametests from. Empty = all namespaces.
-            property 'forge.enabledGameTestNamespaces', lowerName
-
-            mods {
-                "$lowerName" {
-                    source sourceSets.main
-                }
-            }
-        }
-
-        data {
-            workingDirectory project.file('run')
-
-            // Recommended logging data for a userdev environment
-            // The markers can be added/removed as needed separated by commas.
-            // "SCAN": For mods scan.
-            // "REGISTRIES": For firing of registry events.
-            // "REGISTRYDUMP": For getting the contents of all registries.
-            property 'forge.logging.markers', 'REGISTRIES'
-
-            // Recommended logging level for the console
-            // You can set various levels here.
-            // Please read: https://stackoverflow.com/questions/2031163/when-to-use-the-different-log-levels
-            property 'forge.logging.console.level', 'debug'
-
-            // Specify the modid for data generation, where to output the resulting resource, and where to look for existing resources.
-            args '--mod', lowerName, '--all', '--output', file('src/generated/resources/'), '--existing', file('src/main/resources/')
-
-            mods {
-                "$lowerName" {
-                    source sourceSets.main
-                }
-            }
-        }
+    server {
+        systemProperty 'neoforge.enabledGameTestNamespaces', project.lowerName
+        argument '--nogui'
     }
-}
 
-if (useMixins) {
-    mixin {
-        add sourceSets.main, lowerName + ".refmap.json"
-        config noSpaceName + ".mixins.json"
+    // This run config launches GameTestServer and runs all registered gametests, then exits.
+    // By default, the server will crash when no gametests are provided.
+    // The gametest system is also enabled by default for other run configs under the /test command.
+    gameTestServer {
+        systemProperty 'neoforge.enabledGameTestNamespaces', project.lowerName
+    }
+
+    clientData {
+        // example of overriding the workingDirectory set in configureEach above, uncomment if you want to use it
+        // workingDirectory project.file('run-data')
+
+        // Specify the modid for data generation, where to output the resulting resource, and where to look for existing resources.
+        arguments.addAll '--mod', project.lowerName, '--all', '--output', file('src/generated/resources/').getAbsolutePath(), '--existing', file('src/main/resources/').getAbsolutePath()
     }
 }
 
 // Include resources generated by data generators.
-sourceSets.main.resources { srcDir 'src/generated/resources' }
+sourceSets.main.resources {
+    // Include resources generated by data generators.
+    srcDir('src/generated/resources')
+
+    // Exclude common development only resources from finalized outputs
+    exclude("**/*.bbmodel") // BlockBench project files
+    exclude("src/generated/**/.cache") // datagen cache files
+}
+
+// Sets up a dependency configuration called 'localRuntime'.
+// This configuration should be used instead of 'runtimeOnly' to declare
+// a dependency that will be present for runtime testing but that is
+// "optional", meaning it will not be pulled by dependents of this mod.
+configurations {
+    runtimeClasspath.extendsFrom localRuntime
+}
 
 repositories {
-    // Put repositories for dependencies here
-    // ForgeGradle automatically adds the Forge maven and Maven Central for you
-
-    // If you have mod jar dependencies in ./libs, you can declare them as a repository like so:
-    // flatDir {
-    //     dir 'libs'
-    // }
 }
 
 dependencies {
     // Specify the version of Minecraft to use. If this is any group other than 'net.minecraft' it is assumed
     // that the dep is a ForgeGradle 'patcher' dependency, and its patches will be applied.
     // The userdev artifact is a special name and will get all sorts of transformations applied to it.
-    minecraft 'net.minecraftforge:forge:' + FORGE_VERSION
+    implementation "net.neoforged:neoforge:${neoforgeVer}"
 
     // Real mod deobf dependency examples - these get remapped to your current mappings
     // compileOnly fg.deobf("mezz.jei:jei-${mc_version}:${jei_version}:api") // Adds JEI API as a compile dependency
@@ -218,10 +122,32 @@ dependencies {
     // For more info...
     // http://www.gradle.org/docs/current/userguide/artifact_dependencies_tutorial.html
     // http://www.gradle.org/docs/current/userguide/dependency_management.html
+}
 
-    if (useMixins) {
-        annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
+tasks.withType(ProcessResources).configureEach {
+    var replaceProperties = [
+            minecraft_version          : mcVer,
+            minecraft_version_range    : mcVerRange,
+            neoVerRange                : neoVerRange,
+            loader_version_range       : "[1,)",
+            mod_id                     : lowerName,
+            mod_name                   : projectName,
+            mod_license                : license,
+            mod_version                : buildVer,
+            author                     : author,
+            description                : projectDescription,
+            mixins_config              : mixins_config,
+            at_config                  : at_config
+    ]
+    inputs.properties replaceProperties
+
+    filesMatching(['META-INF/neoforge.mods.toml']) {
+        expand replaceProperties
     }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8' // Use the UTF-8 charset for Java compilation
 }
 
 // Example for how to get properties into the manifest for reading at runtime.
@@ -229,85 +155,21 @@ jar {
     manifest {
         attributes([
                 "Specification-Title"     : lowerName,
-                "Specification-Vendor"    : "Ocraftyone",
+                "Specification-Vendor"    : author,
                 "Specification-Version"   : "1", // We are version 1 of ourselves
                 "Implementation-Title"    : project.name,
                 "Implementation-Version"  : buildVer,
-                "Implementation-Vendor"   : "Ocraftyone",
+                "Implementation-Vendor"   : author,
                 "Implementation-Timestamp": new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
         ])
     }
+    archiveBaseName = lowerName
 }
 
-jar.finalizedBy('reobfJar')
-
-tasks.register "publishToCurseforge", {
-    group "publish"
-    def finalChangelog = ""
-    doFirst {
-        var success = false
-        new SwingBuilder().edt {
-            dialog(modal: true,
-                    title: "Enter upload details",
-                    alwaysOnTop: true,
-                    resizable: false,
-                    locationRelativeTo: null,
-                    pack: true,
-                    show: true,
-                    defaultCloseOperation: JFrame.DISPOSE_ON_CLOSE) {
-                panel(layout: new GridLayout(3, 1)) {
-                    label(text: "Changelog")
-                    scrollPane {
-                        changelog = textArea(rows: 6, columns: 30)
-                    }
-
-                    /*label(text: "Release Type")
-                    panel {
-                        var group = new ButtonGroup()
-                        var update = {
-                            finalReleaseType = group.getSelection().actionCommand
-                        }
-                        var release = radioButton(text: "Release", actionPerformed: update, actionCommand: "release")
-                        var beta = radioButton(text: "Beta", actionPerformed: update, actionCommand: "beta")
-                        var alpha = radioButton(text: "Alpha", actionPerformed: update, actionCommand: "alpha")
-                        group.add(release)
-                        group.add(beta)
-                        group.add(alpha)
-                    }*/
-                    panel {
-                        button(text: "OK", actionPerformed: {
-                            finalChangelog = changelog.text
-                            if (!finalChangelog.isEmpty()) {
-                                success = true
-                                file("changelog.txt").write(finalChangelog)
-                            }
-                            dispose()
-                        })
-                        button(text: "Cancel", actionPerformed: {
-                            println "Cancelled"
-                            dispose()
-                        })
-                    }
-                }
-            }
-            if (!success) {
-                throw new GradleException("Upload Cancelled")
-            }
-        }
+// IDEA no longer automatically downloads sources/javadoc jars for dependencies, so we need to explicitly enable the behavior.
+idea {
+    module {
+        downloadSources = true
+        downloadJavadoc = true
     }
 }
-
-curseforge {
-    apiKey = apiToken
-    project {
-        id = projectID
-        mainArtifact jar
-        changelog = file("changelog.txt")
-        releaseType = "release"
-        Arrays.stream(mcVersions).forEachOrdered { String version ->
-            addGameVersion version
-        }
-    }
-}
-
-publishToCurseforge.finalizedBy "curseforge"
