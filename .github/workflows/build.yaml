@@ -18,7 +18,9 @@ jobs:
         uses: gradle/actions/setup-gradle@v5
 
       - name: Build project
-        run: ./gradlew build
+        run: |
+          chmod +x gradlew
+          ./gradlew build
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v7
