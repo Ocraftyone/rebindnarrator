@@ -30,7 +30,7 @@ group = 'com.ocraftyone'
 version = "neoforge-" + jarMCVer + "-" + buildVer
 
 java {
-    toolchain.languageVersion = JavaLanguageVersion.of(21)
+    toolchain.languageVersion = JavaLanguageVersion.of(25)
 }
 
 runs {

@@ -7,10 +7,8 @@
   "mixins": [
   ],
   "client": [
-    "KeyboardHandlerMixin",
-    "KeyboardHandlerMixinOld"
+    "KeyboardHandlerMixin"
   ],
-  "plugin": "com.ocraftyone.rebindnarrator.mixin.MixinPlugin",
   "injectors": {
     "defaultRequire": 1
   }
