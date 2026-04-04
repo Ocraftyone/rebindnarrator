@@ -3,13 +3,6 @@ plugins {
     id 'net.neoforged.gradle.userdev' version '7.1.21'
 }
 
-subsystems {
-    parchment{
-        minecraftVersion = mcVer
-        mappingsVersion = parchmentVer
-    }
-}
-
 ext {
     noSpaceName = projectName.replaceAll(" ", "")
     lowerName = noSpaceName.toLowerCase()
