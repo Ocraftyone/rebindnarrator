@@ -1,6 +1,28 @@
 on:
   push:
   workflow_dispatch:
+    inputs:
+      publish:
+        type: boolean
+        default: false
+        description: Publish to CurseForge/Modrinth
+      publish_description:
+        type: string
+        description: Publish description
+      publish_mc_version:
+        type: string
+        description: MC Versions
+      publish_version:
+        type: string
+        description: Mod Version
+      publish_release_type:
+        type: choice
+        default: Release
+        options:
+          - release
+          - beta
+          - alpha
+        description: Release Type
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -21,6 +43,24 @@ jobs:
         run: |
           chmod +x gradlew
           ./gradlew build
+
+      - name: Publish
+        if: ${{ inputs.publish }}
+        uses: Kira-NT/mc-publish@v3.3.0
+        with:
+          curseforge-id: 628113
+          curseforge-token: ${{ secrets.CURSEFORGE_API_TOKEN }}
+
+          modrinth-id: elMC8kn3
+          modrinth-token: ${{ secrets.MODRINTH_API_TOKEN }}
+
+          changelog: ${{ inputs.publish_description }}
+          game-versions: ${{ inputs.publish_mc_version }}
+          version-type: ${{ inputs.publish_release_type }}
+          version: ${{ inputs.publish_version }}
+          loaders: NeoForge
+          java: 21
+          files: build/libs/rebindnarrator-*.jar
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v7
